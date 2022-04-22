@@ -53,10 +53,8 @@ CR3低5位、PDE低12位、PTE低12位均为属性
  有代码：
 
 ```assembly
-_asm{
-    mov eax, dword ptr ds:[0x401ffe];
-    int 0x3;
-}
+mov eax, dword ptr ds:[0x401ffe];
+int 0x3;
 ```
 
 Ctrl+F5运行后，成功在WinDBG中断下来
@@ -77,7 +75,9 @@ Ctrl+F5运行后，成功在WinDBG中断下来
 
 ![eax的值也为上述内容](/images/image-20220420200239632.png)
 
-## PDE属性
+## PDE
+
+### 属性
 
 ![属性](/images/image-20220420200538312.png)
 
@@ -96,9 +96,193 @@ Ctrl+F5运行后，成功在WinDBG中断下来
 
 **注1**：一个页为4MB且没有PTE，只有PDE和OFFSET
 
-## PTE属性
+
+
+## PTE
+
+### 属性
 
 和PDE的0相对应的位位D位，脏页位，即被使用过即为脏页
 
+### 修改PTE使程序访问0x0线性地址
 
+执行`mov eax, dword ptr ds:[0]`的情况下无法访问内存，是因为该地址在PTE中为缺页状态，访问不到物理地址。
+
+写中断，断到Windbg中
+
+```c
+unsigned int i;
+_asm {
+    int 0x3;
+    mov eax, dword ptr ds:[0];
+    mov i, eax;
+}
+printf("%x\n", i);
+```
+
+```bash
+!dd cr3 #查看CR3地址中的值,实验时cr3为3c505000，其中的值为 3c2d6867 3c3d5867
+!dd 3c2d6000 #找到线性地址为0时的PTE，发现并没有数据
+```
+
+![PTE为0](/images/image-20220421150353890.png)
+
+选择PDI中第二个值，查看PTE，这与PE结构的开头相对应
+
+![PTE加偏移后的值](/images/image-20220421150439783.png)
+
+![可执行文件头](/images/image-20220421150527571.png)
+
+修改第一个PTE的值为第二个PTE的值
+
+![修改PTE](/images/image-20220421151001446.png)
+
+输入g继续执行，输出i
+
+![输出结果](/images/image-20220421151219944.png)
+
+## 查找线性地址中的PDE
+
+Windbg执行`!dd cr3 l400`查看CR3（此处为225d6000）地址中的值，去除低12位搜索相似值的地址，在`225d6c00`处找到相似值
+
+![与CR3值相似的值](/images/image-20220421165720239.png)
+
+取该数据对应的地址 - CR3，即`PDE = 225d6c00 - 225d6000 = c00`
+
+由于`CR3+PDI * 4 = pde`，则`PDI = (PDE - CR3) / 4 = 300`
+
+0x300地址的页比较特殊，既指向PDE又指向PTE也指向OFFSET，称为上帝页，所以可以得出如下结果
+
+`PDI:300  PTI:300  OFFSET:000` => `1100 0000 0011 0000 0000 000` => `c0300000`
+
+![CR3物理地址和线性地址中的值对比](/images/image-20220421170239132.png)
+
+## 查找线性地址中的PTE
+
+由于上述的0x300被称为上帝页，则可根据分离的PDI、PTI以及OFFSET推测出PTI为0时的PTE，将PTI和OFFSET置0则可得出PTE 0的页地址`C0000000`
+
+> PDI     PTI   OFFSET
+>
+> 300     000      000   ===>  C0000000
+
+![PTI线性地址和PTI物理地址](/images/image-20220422205901711.png)
+
+那么也可推测出PTI为1时，PTE为C0001000，以此类推
+
+![PTI线性地址和PTI物理地址](/images/image-20220422210011550.png)
+
+### 打印线性地址中的内容
+
+```c
+// page.cpp : Defines the entry point for the console application.
+//
+
+#include "stdafx.h"
+#include <windows.h>
+
+WORD w_cs;
+WORD w_ss;
+
+DWORD PDTable[0x400];
+
+DWORD GetFunAddress(void* Fun){
+	BYTE* p;
+	p = (BYTE*)Fun;
+	if ( *p == 0xe9){
+		p = p+5+ *(DWORD*)&p[1];
+	}
+	return (DWORD)p;
+}
+
+
+_declspec(naked)void fun()
+{
+	_asm{
+		push ebp
+		mov ebp,esp
+		sub esp,0x44
+		push ebx
+		push esi
+		push edi
+	}
+
+	_asm{
+		mov ax,cs
+		mov cx,ss
+		mov w_cs,ax
+		mov w_ss,cx
+	}
+
+	DWORD* pPDIAddress;
+	DWORD dwPDE;
+	int i;
+	pPDIAddress = (DWORD*)0xc0300000;
+	//进入0环后修改每个PDE属性
+	for ( i = 0; i < 0x400; i++){
+		dwPDE = *(pPDIAddress+i);
+		PDTable[i] = dwPDE;
+		if( (dwPDE&0x1) != 0) //判断是否为有效PDE
+		{
+			*(pPDIAddress+i) = dwPDE | 4; //将U/S位修改为1
+		}
+	}
+    
+	_asm{
+		pop edi
+		pop esi
+		pop ebx
+		mov esp,ebp
+		pop ebp
+		retf
+	}
+}
+
+
+int main(int argc, char* argv[])
+{
+	LPVOID pAddress;
+	DWORD dwFunAddress;
+	DWORD* pReadAddress;
+	int i;
+
+	memset(&w_cs,0,2);
+	memset(PDTable,0x0,0x400);
+
+	pAddress = VirtualAlloc((void*)0x60000000,0x4000,MEM_COMMIT|MEM_RESERVE,PAGE_EXECUTE_READWRITE);
+
+	if ( pAddress != NULL ){
+		dwFunAddress = GetFunAddress(fun);
+		memcpy(pAddress,(void*)dwFunAddress,0x200);
+	}
+
+	printf("拷贝函数成功\n");
+	//进入0环之前要先修改GDTR
+	_asm{
+		_emit(0x9a)
+
+		_emit(0x10)
+		_emit(0x10)
+		_emit(0x10)
+		_emit(0x10)
+
+		_emit(0xc3)
+		_emit(0x00)
+	}
+
+	printf("调用门函数调用成功\n");
+	printf("w_cs = %x, w_ss = %x\n", w_cs,w_ss);
+	printf("--------------PDE-----------\n");
+	pReadAddress = (DWORD*)0xc0300000;
+
+    
+	for ( i = 0; i < 0x3; i++){
+		printf("[0x%08x] = 0x%08x\n", pReadAddress+i, *(pReadAddress+i));
+	}
+    
+	for ( i = 0; i < 0x100; i += 2){
+		printf(" 0x%08x-------0x%08x\n", *(DWORD*)&PDTable[i+1],*(DWORD*)&PDTable[i]);
+	}
+	return 0;
+}
+```
 
