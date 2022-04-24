@@ -6,7 +6,7 @@ tags:
 categories:
   - ctf
 date: 2022-04-15 13:18:00
-img: /images/article-banner/QQ截图20220412163514.jpg
+img: /images/article-banner/QQ截图20220424203532.jpg
 typora-root-url: ..\..\..\
 ---
 
