@@ -2,9 +2,9 @@
 title: 'Windows分页'
 author: Kevin。
 tags:
-  - reverse
+  - os
 categories:
-  - ctf
+  - study
 date: 2022-04-20 13:18:00
 img: /images/article-banner/QQ截图20220420160926.jpg
 typora-root-url: ..\..\..\
@@ -327,3 +327,22 @@ int main(int argc, char* argv[])
 }
 ```
 
+
+
+
+
+打印PDPE PDE PTE
+
+PDPE3  ==> PDPI 3  
+
+PDPI    PDI     PTI   OFFSET
+
+3             3        3         000
+
+C0603000
+
+c060300
+
+PTE C0000000
+
+C0000000 + PDPI * 0x200 * 0x1000 + PDI * 0x1000 + PTI * 8

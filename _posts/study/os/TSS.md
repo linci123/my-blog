@@ -2,9 +2,9 @@
 title: 'TSS 任务状态段描述符'
 author: Kevin。
 tags:
-  - reverse
+  - os
 categories:
-  - ctf
+  - study
 date: 2022-04-15 13:18:00
 img: /images/article-banner/QQ截图20220424203532.jpg
 typora-root-url: ..\..\..\
