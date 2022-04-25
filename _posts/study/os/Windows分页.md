@@ -2,7 +2,8 @@
 title: 'Windows分页'
 author: Kevin。
 tags:
-  - os
+  - os  
+  - Windows
 categories:
   - study
 date: 2022-04-20 13:18:00
