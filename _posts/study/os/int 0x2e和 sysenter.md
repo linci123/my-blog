@@ -7,7 +7,7 @@ tags:
 categories:
   - study
 date: 2022-04-29 13:18:00
-img: /images/article-banner/QQ截图20220427213008.jpg
+img: /images/article-banner/QQ截图20220506230902.jpg
 typora-root-url: ..\..\..\
 ---
 
@@ -387,7 +387,9 @@ dt _DRIVER_OBJECT
 
 dt _LDR_DATA_TABLE_ENTRY
 
+bt 位测试  
 
+cmc cf取反
 
 
 
