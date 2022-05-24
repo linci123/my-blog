@@ -15,13 +15,13 @@ typora-root-url: ..\..\..\
 
 ## 查找函数偏移
 
-要hook SSDT中的函数，就必须先找到这个函数在SSDT表中的偏移才能修改这个偏移上的地址
+要hook SSDT中的函数，就必须先找到这个函数在`SSDT`表中的偏移才能修改这个偏移上的地址
 
-随意打开一个程序，下个API调用时候的断点，这里下writeFile的断点
+随意打开一个程序，下个API调用时候的断点，这里下`writeFile`的断点
 
 ![下断点](/images/image-20220514200909573.png)
 
-F8调试指导出现调用ntdll中的系统函数NtWirteFile，F7步入，0x112就是WriteFile在SSDT中的偏移
+F8调试指导出现调用`ntdll`中的系统函数`NtWirteFile`，F7步入，`0x112`就是`WriteFile`在SSDT中的偏移
 
 ![F8调试](/images/image-20220514200948112.png)
 
@@ -33,7 +33,7 @@ F8调试指导出现调用ntdll中的系统函数NtWirteFile，F7步入，0x112�
 
 ## 编写驱动
 
-这里Hook了NtOpenProcess函数，查找过程与上一节相似，不再赘述
+这里Hook了`NtOpenProcess`函数，查找过程与上一节相似，不再赘述
 
 ```c
 #include <ntddk.h>
