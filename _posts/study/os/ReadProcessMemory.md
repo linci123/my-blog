@@ -424,40 +424,6 @@ BOOL ReadProcessMemory(
 004AD4F0        jmp     loc_4AD40B      // RtlCopyMemory -> memcpy
 004AD4F0 
 ```
-#### loc_4AD496
-```c
-004AD496        cmp     [ebp+RemainingSize], ebx
-004AD499        jb      loc_5266E7      // CurrentSize = RemainingSize
-004AD49F
-004AD49F loc_4AD49F:                    
-004AD49F o = esi
-004AD49F        lea     eax, [ebp+ApcState]
-004AD4A2        push    eax             // ApcState
-004AD4A3        push    [ebp+SourceProcess] // PROCESS
-004AD4A6        call    _KeStackAttachProcess@8 // KeStackAttachProcess(x,x)
-004AD4AB        xor     o, o
-004AD4AD        mov     [ebp+var_3C], o
-004AD4B0        mov     [ebp+Exception.registration.TryLevel], o
-004AD4B3        mov     ecx, [ebp+SourceAddress]
-004AD4B6        cmp     [ebp+CurrentAddress], ecx // (CurrentAddress == SourceAddress) && (PreviousMode != KernelMode)
-004AD4B9        jnz     loc_4AD40B      // RtlCopyMemory -> memcpy
-004AD4BF        cmp     [ebp+PreviousMode], 0 //  KernelMode
-004AD4C3        jz      loc_4AD40B      // RtlCopyMemory -> memcpy
-004AD4C9        mov     [ebp+FailedInProbe], 1
-004AD4D0        mov     eax, [ebp+BufferSize]
-004AD4D3        cmp     eax, o
-004AD4D5        jz      short loc_4AD4ED
-004AD4D7        add     eax, ecx
-004AD4D9        cmp     eax, ecx
-004AD4DB        jb      loc_4E24D5
-004AD4E1        cmp     eax, _MmUserProbeAddress
-004AD4E7        ja      loc_4E24D5
-004AD4ED
-004AD4ED loc_4AD4ED:
-004AD4ED        mov     [ebp+FailedInProbe], esi
-004AD4F0        jmp     loc_4AD40B      // RtlCopyMemory -> memcpy
-```
-
 ### KeStackAttachProcess
 
 ```c
